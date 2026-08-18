@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-shapely
-opencv-python-headless
-pydantic
-numpy
-python-multipart
