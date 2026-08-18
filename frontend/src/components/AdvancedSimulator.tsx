@@ -121,7 +121,7 @@ export default function AdvancedSimulator({ file }: Props) {
       
       // We directly hit the backend DST exporter with the simulated points
       // We only pass x, y, and cmd to the backend.
-      const payload = stitches.map(s => [s[0], s[1], s[2]]);
+      const payload: [number, number, string][] = stitches.map(s => [Number(s[0]), Number(s[1]), String(s[2])]);
       await downloadDst(payload);
     } catch (err) {
       console.error(err);
