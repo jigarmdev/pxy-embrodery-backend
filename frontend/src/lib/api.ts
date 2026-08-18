@@ -18,7 +18,14 @@ export interface DigitizeResponse {
   metrics: StitchMetrics;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+let rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+if (rawApiUrl.endsWith('/')) {
+  rawApiUrl = rawApiUrl.slice(0, -1);
+}
+if (!rawApiUrl.endsWith('/api')) {
+  rawApiUrl += '/api';
+}
+const API_BASE = rawApiUrl;
 
 export async function digitizeShape(width_mm: number, height_mm: number, stitch_type: string, fabric_id: string, file?: File | null): Promise<DigitizeResponse> {
   const formData = new FormData();
