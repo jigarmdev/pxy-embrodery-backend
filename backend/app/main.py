@@ -18,6 +18,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "pxy888 Embroidery CAD/CAM API is running. Use /docs to view the API documentation."}
+
+
 @app.post("/api/digitize")
 async def digitize_sample_shape(
     width_mm: float = Form(80.0),
