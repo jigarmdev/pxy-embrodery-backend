@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Machine Embroidery Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f4ef;--card:#fff;--border:#e2ddd6;--text:#1a1714;
+  --muted:#6b6560;--hint:#a09a94;--accent:#2d6a4f;--accent2:#52b788;
+  --accent-light:#d8f3dc;--danger:#922b21;--danger-light:#fce8e8;
+  --radius:12px;--radius-sm:8px;--shadow:0 2px 16px rgba(0,0,0,.07);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:1.5rem 1rem}
+.page{max-width:1060px;margin:0 auto}
+.header{text-align:center;margin-bottom:2rem}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-radius:100px;margin-bottom:10px}
+.header h1{font-family:'Playfair Display',serif;font-size:clamp(22px,4vw,34px);font-weight:700;line-height:1.15;margin-bottom:8px}
+.header p{font-size:14px;color:var(--muted);max-width:580px;margin:0 auto;line-height:1.6}
+.panel{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:1.5rem;margin-bottom:1rem;box-shadow:var(--shadow)}
+.ptitle{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--hint);margin-bottom:.75rem}
+
+/* Upload */
+.dz{border:2px dashed var(--border);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg)}
+.dz:hover,.dz.drag{border-color:var(--accent2);background:var(--accent-light)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{font-size:36px;margin-bottom:8px}
+.dz h3{font-size:14px;font-weight:500;margin-bottom:4px}
+.dz p{font-size:12px;color:var(--muted)}
+
+/* Auto badge */
+.auto-badge{display:inline-flex;align-items:center;gap:5px;background:#e8f4ff;color:#1565c0;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:100px;margin-left:8px;vertical-align:middle}
+.auto-dot{width:6px;height:6px;border-radius:50%;background:#1565c0;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+/* Layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:660px){.two-col{grid-template-columns:1fr}}
+
+/* Category tabs */
+.cat-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.cat-tab{padding:4px 12px;border-radius:100px;font-size:10px;font-weight:700;border:1px solid var(--border);background:var(--bg);cursor:pointer;transition:all .15s;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.cat-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Stitch cards */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:6px}
+.sel-card{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 6px 6px;cursor:pointer;transition:all .12s;background:var(--bg);text-align:center;user-select:none}
+.sel-card:hover{border-color:var(--accent2);background:var(--accent-light)}
+.sel-card.active{border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 2px rgba(45,106,79,.12)}
+.sel-card .si{font-size:18px;margin-bottom:3px}
+.sel-card .sn{font-size:10px;font-weight:700;color:var(--text);line-height:1.2;margin-bottom:1px}
+.sel-card .ss{font-size:9px;color:var(--hint)}
+.stitch-info{background:var(--accent-light);border:1px solid #a8dbb8;border-radius:var(--radius-sm);padding:9px 12px;font-size:11px;color:var(--accent);margin-top:8px;line-height:1.6;display:none}
+
+/* Price */
+.price-row{display:flex;align-items:center;gap:12px}
+.price-row label{font-size:12px;color:var(--muted);white-space:nowrap;min-width:62px}
+.price-row input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:linear-gradient(to right,var(--accent) 0%,var(--accent) var(--pct,20%),var(--border) var(--pct,20%),var(--border) 100%);border-radius:2px;outline:none}
+.price-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,.2)}
+.price-val{font-size:14px;font-weight:600;color:var(--accent);min-width:76px;text-align:right}
+
+/* Preview panel */
+.preview-wrap{position:relative}
+.preview-canvas-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.canvas-box{display:flex;flex-direction:column;align-items:center;gap:6px}
+.canvas-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hint)}
+.stitch-canvas{border-radius:8px;border:1px solid var(--border);max-width:100%;display:block;background:var(--bg)}
+.spinning{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.8);border-radius:var(--radius);z-index:10;pointer-events:none;opacity:0;transition:opacity .2s}
+.spinning.show{opacity:1}
+.spin{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Tabs */
+.tabs{display:flex;gap:5px;margin-bottom:1rem;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:100px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--bg);cursor:pointer;transition:all .12s;color:var(--muted)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1rem}
+.stat-card{background:var(--bg);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)}
+.stat-lbl{font-size:10px;color:var(--hint);margin-bottom:3px;font-weight:500;letter-spacing:.04em}
+.stat-val{font-size:18px;font-weight:600;line-height:1}
+.stat-unit{font-size:10px;color:var(--hint);font-weight:400}
+.color-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:.75rem;gap:1px}
+.color-grid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:1rem}
+.color-chip{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px}
+.swatch{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(0,0,0,.1);flex-shrink:0}
+.chip-name{font-size:12px;font-weight:500}
+.chip-meta{font-size:10px;color:var(--muted);font-family:monospace}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+@media(max-width:520px){.det-grid{grid-template-columns:1fr}}
+.det-cell{background:var(--bg);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)}
+.det-key{font-size:10px;color:var(--hint);margin-bottom:2px;font-weight:500}
+.det-val{font-size:12px;font-weight:500}
+.mat-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mat-tbl th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--hint);padding:0 8px 8px 0;border-bottom:1px solid var(--border)}
+.mat-tbl td{padding:9px 8px 9px 0;border-bottom:1px solid var(--border)}
+.mat-tbl tr:last-child td,.mat-tbl .tot td{border-bottom:none}
+.mat-tbl .tot td{font-weight:600;color:var(--accent);padding-top:12px}
+.bdg-track{height:7px;background:var(--border);border-radius:4px;overflow:hidden;margin:7px 0}
+.bdg-fill{height:100%;border-radius:4px;transition:width .6s}
+.bdg-lbl-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.feas-badge{display:inline-block;padding:3px 12px;border-radius:100px;font-size:11px;font-weight:600;margin-top:8px}
+.summary-box{background:var(--bg);border-left:3px solid var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:12px 14px;font-size:13px;line-height:1.7;color:var(--muted);margin-bottom:1rem}
+.tips-list{list-style:none}
+.tips-list li{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.5}
+.tips-list li:last-child{border-bottom:none}
+.divider{height:1px;background:var(--border);margin:1.25rem 0}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all .12s}
+.btn:hover{background:var(--bg)}
+.btn.outline{border-color:var(--accent);color:var(--accent)}
+.btn.outline:hover{background:var(--accent-light)}
+.err-msg{background:var(--danger-light);border:1px solid #f5b7b1;border-radius:var(--radius-sm);padding:10px 12px;color:var(--danger);font-size:12px;margin-top:8px;display:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .35s ease forwards}
+#result{display:none}
+.hidden{display:none!important}
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>
+<canvas id="cvsWork" class="hidden"></canvas>
+<div class="page">
+
+<div class="header">
+  <div class="badge">🧵 Real Stitch Simulator</div>
+  <h1>Machine Embroidery Analyzer</h1>
+  <p>Upload a design — <strong>auto-previews instantly</strong> as you change stitch type or fabric. 25 authentic stitch methods with real thread geometry.</p>
+</div>
+
+<!-- Upload -->
+<div class="panel no-print">
+  <div class="ptitle">1 · Upload Design <span class="auto-badge"><span class="auto-dot"></span>Auto-Analyzes</span></div>
+  <div class="dz" id="dz">
+    <input type="file" id="fi" accept="image/png,image/jpeg,image/jpg,image/webp"/>
+    <div class="dz-icon">🖼️</div>
+    <h3>Click or drag & drop — preview updates live as you change settings</h3>
+    <p>PNG · JPEG · WebP — all processing in-browser</p>
+  </div>
+  <div class="err-msg" id="errMsg"></div>
+</div>
+
+<!-- Budget -->
+<div class="panel no-print">
+  <div class="ptitle">2 · Set Budget</div>
+  <div class="price-row">
+    <label>Budget (₹)</label>
+    <input type="range" id="ps" min="200" max="20000" step="100" value="3000" oninput="updatePrice(this)"/>
+    <span class="price-val" id="pv">₹3,000</span>
+  </div>
+</div>
+
+<!-- Stitch + Fabric -->
+<div class="panel no-print">
+  <div class="ptitle">3 · Choose Stitch Type & Fabric <span class="auto-badge"><span class="auto-dot"></span>Live Preview</span></div>
+  <div class="two-col">
+    <div>
+      <div class="ptitle">Machine Stitch Method</div>
+      <div class="cat-tabs" id="catTabs"></div>
+      <div class="card-grid" id="stitchGrid"></div>
+      <div class="stitch-info" id="stitchInfo"></div>
+    </div>
+    <div>
+      <div class="ptitle">Fabric Material</div>
+      <div class="card-grid" id="fabricGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="result" class="fade-up">
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div>
+        <div class="ptitle" style="margin:0">🪡 Live Preview — <strong id="previewLabel" style="color:var(--accent);font-size:11px;font-weight:700"></strong></div>
+      </div>
+      <button class="btn outline" onclick="dlPreview()">⬇ Save</button>
+    </div>
+    <div class="tabs" id="previewTabs">
+      <button class="tab active" onclick="switchTab('main',this)">Stitch Sim</button>
+      <button class="tab" onclick="switchTab('zoom',this)">🔍 Closeup</button>
+      <button class="tab" onclick="switchTab('chart',this)">⬛ DMC Chart</button>
+      <button class="tab" onclick="switchTab('outline',this)">✏ Path Guide</button>
+      <button class="tab" onclick="switchTab('orig',this)">🖼 Original</button>
+    </div>
+    <div style="position:relative">
+      <div class="spinning" id="spinner"><div class="spin"></div></div>
+      <div id="tab-main" class="tab-content" style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <canvas id="cvsMain" class="stitch-canvas"></canvas>
+        <p id="mainCaption" style="font-size:11px;color:var(--hint);text-align:center;max-width:520px"></p>
+      </div>
+      <div id="tab-zoom" class="tab-content" style="display:none;flex-direction:column;align-items:center;gap:8px">
+        <canvas id="cvsZoom" class="stitch-canvas"></canvas>
+        <p style="font-size:11px;color:var(--hint)">8× magnified centre crop — shows individual thread geometry</p>
+      </div>
+      <div id="tab-chart" class="tab-content" style="display:none;flex-direction:column;align-items:center;gap:8px">
+        <canvas id="cvsChart" class="stitch-canvas"></canvas>
+        <div id="chartLegend" style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:4px"></div>
+      </div>
+      <div id="tab-outline" class="tab-content" style="display:none;flex-direction:column;align-items:center;gap:8px">
+        <canvas id="cvsOutline" class="stitch-canvas"></canvas>
+        <p style="font-size:11px;color:var(--hint)">Machine needle path — edges where stitching follows contour</p>
+      </div>
+      <div id="tab-orig" class="tab-content" style="display:none;flex-direction:column;align-items:center;gap:8px">
+        <canvas id="cvsOrig" class="stitch-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="ptitle" style="margin:0">📊 Analysis</div>
+      <button class="btn" onclick="window.print()">🖨 Print</button>
+    </div>
+    <div class="ptitle">Overview</div>
+    <div id="statGrid" class="stat-grid"></div>
+    <div class="divider"></div>
+    <div class="ptitle">Thread Colors (DMC)</div>
+    <div id="colorBar" class="color-bar"></div>
+    <div id="colorGrid" class="color-grid"></div>
+    <div class="divider"></div>
+    <div class="ptitle">Stitch & Fabric Details</div>
+    <div id="fabGrid" class="det-grid"></div>
+    <div class="divider"></div>
+    <div class="ptitle">Materials & Cost</div>
+    <table class="mat-tbl" id="matTbl"></table>
+    <div class="divider"></div>
+    <div class="ptitle">Budget</div>
+    <div id="bdgSec"></div>
+    <div class="divider"></div>
+    <div class="ptitle">Summary</div>
+    <div id="sumBox" class="summary-box"></div>
+    <div class="ptitle">Tips</div>
+    <ul class="tips-list" id="tipsList"></ul>
+  </div>
+</div>
+
+</div><!-- .page -->
+
+<script>
+// ══════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════
+const CATS=[
+  {id:'fill',label:'Fill'},
+  {id:'line',label:'Line'},
+  {id:'loop',label:'Loop'},
+  {id:'special',label:'Special'},
+  {id:'edge',label:'Edge'},
+  {id:'digital',label:'Digital'},
+];
+const STITCHES=[
+  {id:'satin',   cat:'fill',   icon:'▬',name:'Satin',       sub:'Smooth fill',      density:1.0,dm:1.0,
+   desc:'Dense parallel stitches at a consistent angle. Real satin stitch renders each thread as an overlapping strand with gloss shimmer based on angle.'},
+  {id:'tatami',  cat:'fill',   icon:'▦',name:'Tatami',      sub:'Brick pattern',    density:0.8,dm:0.9,
+   desc:'Offset rows of short run stitches in a brick pattern. Each row offsets by half to eliminate visible seams between rows.'},
+  {id:'seed',    cat:'fill',   icon:'∴',name:'Seed',        sub:'Scattered dots',   density:0.4,dm:0.45,
+   desc:'Randomly scattered short stitches. Each seed stitch is a small straight stitch of random angle — used for shading and texture.'},
+  {id:'spiral',  cat:'fill',   icon:'🌀',name:'Spiral',     sub:'Concentric arcs',  density:0.7,dm:0.75,
+   desc:'Outward concentric stitch rows following shape centre. Machine runs spiral from inside out.'},
+  {id:'contour', cat:'fill',   icon:'〰',name:'Contour',    sub:'Shape-following',  density:0.75,dm:0.8,
+   desc:'Fill stitches run parallel to shape edge contour. Creates a flowing, topographic appearance.'},
+  {id:'radial',  cat:'fill',   icon:'✳',name:'Radial',      sub:'Fan from centre',  density:0.7,dm:0.75,
+   desc:'Stitches radiate outward like spokes from a centre point. Strong dimensional effect.'},
+  {id:'run',     cat:'line',   icon:'—',name:'Running',     sub:'Dashed outline',   density:0.2,dm:0.25,
+   desc:'Single-pass dashed stitch tracing edges. Each stitch is a discrete segment with gap between.'},
+  {id:'bean',    cat:'line',   icon:'⋯',name:'Bean/Triple', sub:'Bold outline',     density:0.3,dm:0.35,
+   desc:'Running stitch made three times over the same path for a thick rope-like outline.'},
+  {id:'stem',    cat:'line',   icon:'〜',name:'Stem',        sub:'Rope curve',       density:0.35,dm:0.4,
+   desc:'Overlapping angled stitches forming a twisted rope. Each stitch returns to midpoint of previous.'},
+  {id:'back',    cat:'line',   icon:'⟵',name:'Back',        sub:'Solid line',       density:0.3,dm:0.35,
+   desc:'Continuous solid line — each stitch starts where previous ended. Strongest outline stitch.'},
+  {id:'straight',cat:'line',   icon:'━',name:'Straight',    sub:'Free stitches',    density:0.15,dm:0.2,
+   desc:'Individual freely-placed straight stitches of varying length and angle. Used for fur, grass, hair.'},
+  {id:'chain',   cat:'loop',   icon:'⧠',name:'Chain',       sub:'Interlocked loops',density:0.6,dm:0.7,
+   desc:'Each loop is anchored through the previous loop, creating a chain. High texture and dimension.'},
+  {id:'feather', cat:'loop',   icon:'🪶',name:'Feather',     sub:'Branching loops',  density:0.45,dm:0.5,
+   desc:'Alternating left/right loops from a centre spine. Creates feathery branching decorative border.'},
+  {id:'blanket', cat:'loop',   icon:'⊓',name:'Blanket',     sub:'Edge loops',       density:0.4,dm:0.45,
+   desc:'Perpendicular loops over fabric edge. Real blanket stitch has a bar at top and loop at bottom.'},
+  {id:'fly',     cat:'loop',   icon:'⋎',name:'Fly',         sub:'Y-shaped loops',   density:0.35,dm:0.4,
+   desc:'Open Y-shape. Two upper arms converge to a tied-down tail. Used for leaf and feather motifs.'},
+  {id:'cross',   cat:'special',icon:'✕',name:'Cross',       sub:'× pattern',        density:0.7,dm:0.85,
+   desc:'Two diagonal stitches crossing at centre. Bottom stitch first, top stitch second (consistent direction).'},
+  {id:'padded',  cat:'special',icon:'◈',name:'Padded Satin',sub:'3D raised',        density:1.1,dm:1.1,
+   desc:'Multiple stacked satin layers create a raised 3D effect. First pass diagonal, second perpendicular on top.'},
+  {id:'motif',   cat:'special',icon:'❋',name:'Motif Fill',  sub:'Repeat pattern',   density:0.5,dm:0.55,
+   desc:'Small geometric motif (star/diamond) repeated in a grid pattern across the fill area.'},
+  {id:'stipple', cat:'special',icon:'⠿',name:'Stipple',     sub:'Meander path',     density:0.35,dm:0.4,
+   desc:'A single continuous non-crossing meander path through the fill area. Classic quilting stitch.'},
+  {id:'zigzag',  cat:'edge',   icon:'⟨⟩',name:'Zigzag',    sub:'Alternating diag', density:0.5,dm:0.55,
+   desc:'Alternating left-right diagonal stitches. Real zigzag has consistent bite width and stitch length.'},
+  {id:'scallop', cat:'edge',   icon:'∿',name:'Scallop',     sub:'Arc border',       density:0.4,dm:0.45,
+   desc:'Repeating arcs along an edge. Each arc is a series of radial satin stitches fanning from a point.'},
+  {id:'picot',   cat:'edge',   icon:'⌇',name:'Picot',       sub:'Looped trim',      density:0.35,dm:0.4,
+   desc:'Small anchor loops projecting from edge. Each picot is a loop held by two lock stitches.'},
+  {id:'prog',    cat:'digital',icon:'▤',name:'Programmable',sub:'DST grid fill',    density:0.9,dm:1.0,
+   desc:'Computer-optimised snake-scan stitch path. Renders actual machine needle positions as in DST files.'},
+  {id:'dst',     cat:'digital',icon:'⊛',name:'DST Trace',   sub:'Path visualise',   density:0.6,dm:0.65,
+   desc:'Visualises the machine needle path including jump stitches (orange dashes) and lock points.'},
+  {id:'photo',   cat:'digital',icon:'📷',name:'Photo',       sub:'Tone by density',  density:0.85,dm:0.9,
+   desc:'Photo-realistic simulation: stitch density varies by pixel luminance. Dark areas = dense stitches.'},
+];
+const FABRICS=[
+  {id:'cotton',   icon:'🌿',name:'Cotton',      sub:'Standard',    color:'#f5f0e8',grain:true, desc:'Most common fabric. Easy to hoop.',stab:'Cut-away',   needle:'75/11 Sharp', tension:'Normal'},
+  {id:'aida',     icon:'⊞',name:'Aida',         sub:'Cross stitch',color:'#f0ece0',grain:true, desc:'Evenweave for cross stitch.',      stab:'None',        needle:'75/11 Sharp', tension:'Normal'},
+  {id:'denim',    icon:'👖',name:'Denim',        sub:'Heavy',       color:'#4a6fa5',grain:true, desc:'Heavy woven, strong needle.',      stab:'Tear-away',   needle:'90/14 Denim', tension:'Loose'},
+  {id:'silk',     icon:'✨',name:'Silk',         sub:'Delicate',    color:'#f8f2e0',grain:false,desc:'Reduce density 20%.',              stab:'Tear+topping',needle:'65/9 Microtex',tension:'Tight'},
+  {id:'fleece',   icon:'🧣',name:'Fleece',       sub:'Stretch',     color:'#e8e0d8',grain:false,desc:'Use cut-away + topping.',          stab:'Cut+topping', needle:'75/11 Ball',  tension:'Normal'},
+  {id:'leather',  icon:'🟫',name:'Leather',      sub:'Vinyl/bags',  color:'#7a5230',grain:false,desc:'Puncture-permanent, keep low.',    stab:'No-show mesh',needle:'90/14 Leather',tension:'Loose'},
+  {id:'towel',    icon:'🏊',name:'Towel',        sub:'Terry pile',  color:'#d0e8f0',grain:false,desc:'Always use wash-away topping.',    stab:'Cut+wash top',needle:'75/11 Ball',  tension:'Normal'},
+  {id:'linen',    icon:'🌾',name:'Linen',        sub:'Natural',     color:'#d8cbb4',grain:true, desc:'Crisp natural texture.',           stab:'Light tear',  needle:'80/12 Sharp', tension:'Normal'},
+  {id:'organza',  icon:'💎',name:'Organza',      sub:'Sheer',       color:'#e8f4f8',grain:false,desc:'Water-soluble stabilizer only.',   stab:'Water-soluble',needle:'65/9 Microtex',tension:'Tight'},
+  {id:'polyester',icon:'🔵',name:'Polyester',    sub:'Athletic',    color:'#e0eaf5',grain:false,desc:'Reduce foot pressure.',            stab:'Tear-away',   needle:'75/11 Ball',  tension:'Normal'},
+  {id:'canvas',   icon:'🎨',name:'Canvas',       sub:'Heavy-duty',  color:'#e0d8c0',grain:true, desc:'Very stable, ideal for fills.',    stab:'None',        needle:'90/14 Denim', tension:'Normal'},
+  {id:'felt',     icon:'🟥',name:'Felt',         sub:'Craft',       color:'#f0d8d0',grain:false,desc:'Non-woven, no stabilizer needed.', stab:'None',        needle:'75/11 Sharp', tension:'Normal'},
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let _sel=STITCHES[0],_fab=FABRICS[0],_dataURL=null,_imgData=null,_palette=[];
+let _activeCat='fill',_debTimer=null,_rendering=false;
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function init(){
+  buildCatTabs();renderStitchCards();buildFabricGrid();
+  updatePrice(document.getElementById('ps'));
+  document.getElementById('ps').addEventListener('change',()=>{if(_imgData)renderBudget(window._LR,+document.getElementById('ps').value);});
+}
+
+function buildCatTabs(){
+  const el=document.getElementById('catTabs');
+  CATS.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='cat-tab'+(c.id===_activeCat?' active':'');
+    b.textContent=c.label;
+    b.onclick=()=>{_activeCat=c.id;el.querySelectorAll('.cat-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderStitchCards();};
+    el.appendChild(b);
+  });
+}
+function renderStitchCards(){
+  const g=document.getElementById('stitchGrid');g.innerHTML='';
+  STITCHES.filter(s=>s.cat===_activeCat).forEach(s=>{
+    const d=document.createElement('div');
+    d.className='sel-card'+(s.id===_sel.id?' active':'');
+    d.innerHTML=`<div class="si">${s.icon}</div><div class="sn">${s.name}</div><div class="ss">${s.sub}</div>`;
+    d.onclick=()=>{_sel=s;document.querySelectorAll('#stitchGrid .sel-card').forEach(c=>c.classList.remove('active'));d.classList.add('active');showInfo(s);scheduleRender();};
+    g.appendChild(d);
+  });
+}
+function buildFabricGrid(){
+  const g=document.getElementById('fabricGrid');
+  FABRICS.forEach(f=>{
+    const d=document.createElement('div');
+    d.className='sel-card'+(f.id===_fab.id?' active':'');
+    d.innerHTML=`<div class="si">${f.icon}</div><div class="sn">${f.name}</div><div class="ss">${f.sub}</div>`;
+    d.onclick=()=>{_fab=f;document.querySelectorAll('#fabricGrid .sel-card').forEach(c=>c.classList.remove('active'));d.classList.add('active');scheduleRender();};
+    g.appendChild(d);
+  });
+}
+function showInfo(s){const el=document.getElementById('stitchInfo');el.textContent=s.desc;el.style.display='block';}
+function updatePrice(el){const v=+el.value;document.getElementById('pv').textContent='₹'+v.toLocaleString('en-IN');el.style.setProperty('--pct',((v-200)/(20000-200)*100).toFixed(1)+'%');}
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(e=>{e.style.display='none';});
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('tab-'+id).style.display='flex';btn.classList.add('active');
+}
+function dlPreview(){const cvs=document.getElementById('cvsMain');if(!cvs.width)return;const a=document.createElement('a');a.href=cvs.toDataURL();a.download='embroidery.png';a.click();}
+
+// ══════════════════════════════════════════════
+// FILE LOAD
+// ══════════════════════════════════════════════
+const dz=document.getElementById('dz'),fi=document.getElementById('fi');
+fi.onchange=e=>e.target.files[0]&&loadFile(e.target.files[0]);
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('drag')};
+dz.ondragleave=()=>dz.classList.remove('drag');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');e.dataTransfer.files[0]&&loadFile(e.dataTransfer.files[0])};
+function loadFile(f){
+  const r=new FileReader();
+  r.onload=ev=>{
+    _dataURL=ev.target.result;
+    document.getElementById('errMsg').style.display='none';
+    const img=new Image();
+    img.onload=()=>{
+      _imgData=null;// reset so scheduleRender re-processes
+      prepareImageData(img,()=>scheduleRender());
+    };
+    img.src=_dataURL;
+  };
+  r.readAsDataURL(f);
+}
+function prepareImageData(img,cb){
+  const MAX=180,scale=Math.min(1,MAX/Math.max(img.naturalWidth,img.naturalHeight));
+  const sw=Math.round(img.naturalWidth*scale),sh=Math.round(img.naturalHeight*scale);
+  const cvs=document.getElementById('cvsWork');cvs.width=sw;cvs.height=sh;
+  const ctx=cvs.getContext('2d');ctx.drawImage(img,0,0,sw,sh);
+  _imgData=ctx.getImageData(0,0,sw,sh);
+  _palette=extractPalette(_imgData.data,10);
+  // Draw original
+  const co=document.getElementById('cvsOrig');co.width=sw;co.height=sh;co.getContext('2d').drawImage(img,0,0,sw,sh);fitCanvas(co,sw,sh);
+  if(cb)cb();
+}
+
+// ══════════════════════════════════════════════
+// AUTO-RENDER SCHEDULER
+// ══════════════════════════════════════════════
+function scheduleRender(){
+  if(!_imgData)return;
+  clearTimeout(_debTimer);
+  _debTimer=setTimeout(()=>doRender(),60);
+}
+function doRender(){
+  if(_rendering)return;
+  _rendering=true;
+  showSpinner(true);
+  requestAnimationFrame(()=>{
+    try{
+      drawStitch(_imgData,_sel,_fab);
+      drawZoom(_imgData,_sel,_fab);
+      drawChart(_imgData,_palette);
+      drawOutline(_imgData);
+      const budget=+document.getElementById('ps').value;
+      const metrics=calcMetrics(_imgData);
+      const result=buildResult(metrics,_palette,_imgData.width*5,_imgData.height*5,budget,_sel,_fab);
+      window._LR=result;
+      renderResult(result,budget);
+      document.getElementById('previewLabel').textContent=_sel.name+' on '+_fab.name;
+      document.getElementById('result').style.display='block';
+    }catch(e){
+      document.getElementById('errMsg').textContent='⚠ '+e.message;
+      document.getElementById('errMsg').style.display='block';
+    }
+    showSpinner(false);
+    _rendering=false;
+  });
+}
+function showSpinner(v){document.getElementById('spinner').classList.toggle('show',v);}
+
+// ══════════════════════════════════════════════
+// CANVAS HELPERS
+// ══════════════════════════════════════════════
+function fitCanvas(cvs,W,H){const t=380,ds=Math.min(1,t/Math.max(W,H));cvs.style.width=Math.round(W*ds)+'px';cvs.style.height=Math.round(H*ds)+'px';}
+function setupCanvas(id,W,H){const c=document.getElementById(id);c.width=W;c.height=H;fitCanvas(c,W,H);return c;}
+function clamp(v){return Math.max(0,Math.min(255,Math.round(v)));}
+function hexRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function rgbHex(r,g,b){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');}
+function adjCol(hex,a){const[r,g,b]=hexRgb(hex);return rgbHex(clamp(r+a),clamp(g+a),clamp(b+a));}
+function lumRGB(r,g,b){return 0.299*r+0.587*g+0.114*b;}
+function isBg(R,G,B,A,fc){return A<80||(Math.abs(R-fc[0])<40&&Math.abs(G-fc[1])<40&&Math.abs(B-fc[2])<40)||(R>232&&G>232&&B>232);}
+
+// ══════════════════════════════════════════════
+// HOOP OVERLAY — real wooden embroidery hoop
+// ══════════════════════════════════════════════
+function drawHoop(ctx,W,H){
+  const cx=W/2,cy=H/2,rx=W/2-5,ry=H/2-5;
+  // Mask outside hoop
+  ctx.save();
+  ctx.beginPath();ctx.rect(0,0,W,H);ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+  ctx.clip('evenodd');ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(0,0,W,H);ctx.restore();
+  // Hoop ring
+  for(let i=3;i>=0;i--){
+    const alpha=[.15,.2,.3,.5][i];const lw=[18,14,10,5][i];
+    ctx.strokeStyle=`rgba(${[160,130,100,200][i]},${[100,85,70,150][i]},${[50,45,40,90][i]},${alpha})`;
+    ctx.lineWidth=lw;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+  }
+  // Wood texture lines
+  ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip('evenodd');// outside only
+  ctx.restore();
+  // Screw
+  const sg=ctx.createRadialGradient(cx-3,cy-ry+8,1,cx,cy-ry+12,10);
+  sg.addColorStop(0,'#e8c06a');sg.addColorStop(.5,'#b87f2a');sg.addColorStop(1,'#6a3d0a');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(cx,cy-ry+12,9,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(cx-5,cy-ry+12);ctx.lineTo(cx+5,cy-ry+12);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-ry+7);ctx.lineTo(cx,cy-ry+17);ctx.stroke();
+}
+function drawGrain(ctx,W,H,col){
+  ctx.globalAlpha=.06;ctx.fillStyle=adjCol(col,-20);
+  for(let x=0;x<W;x+=3)ctx.fillRect(x,0,1,H);
+  for(let y=0;y<H;y+=3)ctx.fillRect(0,y,W,1);
+  ctx.globalAlpha=1;
+}
+
+// ══════════════════════════════════════════════
+// THREAD DRAWING — the core: draw a single thread strand
+// simulates: twist highlight, shadow, slight taper
+// ══════════════════════════════════════════════
+function drawThread(ctx,x1,y1,x2,y2,R,G,B,thickness,shimAmt){
+  const mx=(x1+x2)/2,my=(y1+y2)/2;
+  const len=Math.hypot(x2-x1,y2-y1);
+  const angle=Math.atan2(y2-y1,x2-x1);
+  const shim=shimAmt||0;
+  // Shadow pass
+  ctx.save();ctx.globalAlpha=.22;
+  ctx.strokeStyle=`rgb(${clamp(R-55)},${clamp(G-55)},${clamp(B-55)})`;
+  ctx.lineWidth=thickness+.8;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1+.7,y1+.7);ctx.lineTo(x2+.7,y2+.7);ctx.stroke();
+  ctx.restore();
+  // Main thread body
+  ctx.strokeStyle=`rgb(${R},${G},${B})`;
+  ctx.lineWidth=thickness;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // Twist highlight (perpendicular shimmer)
+  if(shim>0&&len>4){
+    const perp=angle+Math.PI/2;
+    const off=thickness*.3;
+    ctx.save();ctx.globalAlpha=shim*.45;
+    ctx.strokeStyle=`rgb(${clamp(R+55)},${clamp(G+55)},${clamp(B+55)})`;
+    ctx.lineWidth=Math.max(.5,thickness*.3);ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x1+Math.cos(perp)*off,y1+Math.sin(perp)*off);ctx.lineTo(x2+Math.cos(perp)*off,y2+Math.sin(perp)*off);ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ══════════════════════════════════════════════
+// ZOOM VIEW — 8× centre crop
+// ══════════════════════════════════════════════
+function drawZoom(src,stitch,fab){
+  const main=document.getElementById('cvsMain');
+  if(!main.width)return;
+  const S=5;// use a small crop
+  const cw=Math.min(src.width,30),ch=Math.min(src.height,30);
+  const ox=Math.floor((src.width-cw)/2),oy=Math.floor((src.height-ch)/2);
+  // Create a mini ImageData for the crop
+  const cropData={width:cw,height:ch,data:new Uint8ClampedArray(cw*ch*4)};
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){
+    const si=((oy+y)*src.width+(ox+x))*4;const di=(y*cw+x)*4;
+    cropData.data[di]=src.data[si];cropData.data[di+1]=src.data[si+1];cropData.data[di+2]=src.data[si+2];cropData.data[di+3]=src.data[si+3];
+  }
+  // Draw a higher-S version of the main stitch
+  const ZOOM_S=8;
+  const W=cw*ZOOM_S,H=ch*ZOOM_S;
+  const cvs=setupCanvas('cvsZoom',W,H);
+  const ctx=cvs.getContext('2d');
+  ctx.fillStyle=fab.color;ctx.fillRect(0,0,W,H);
+  if(fab.grain)drawGrain(ctx,W,H,fab.color);
+  const fc=hexRgb(fab.color);
+  // Use the stitch-specific renderer at ZOOM_S scale
+  renderStitchAtScale(ctx,cropData,stitch,fab,fc,ZOOM_S);
+  drawHoop(ctx,W,H);
+}
+
+// ══════════════════════════════════════════════
+// STITCH DISPATCHER
+// ══════════════════════════════════════════════
+function drawStitch(src,stitch,fab){
+  const S=4;
+  const W=src.width*S,H=src.height*S;
+  const cvs=setupCanvas('cvsMain',W,H);
+  const ctx=cvs.getContext('2d');
+  ctx.fillStyle=fab.color;ctx.fillRect(0,0,W,H);
+  if(fab.grain)drawGrain(ctx,W,H,fab.color);
+  const fc=hexRgb(fab.color);
+  document.getElementById('mainCaption').textContent=stitch.desc;
+  renderStitchAtScale(ctx,src,stitch,fab,fc,S);
+  drawHoop(ctx,W,H);
+}
+
+function renderStitchAtScale(ctx,src,stitch,fab,fc,S){
+  const fn={
+    satin:rSatin,tatami:rTatami,seed:rSeed,spiral:rSpiral,contour:rContour,radial:rRadial,
+    run:rRun,bean:rBean,stem:rStem,back:rBack,straight:rStraight,
+    chain:rChain,feather:rFeather,blanket:rBlanket,fly:rFly,
+    cross:rCross,padded:rPaddedSatin,motif:rMotif,stipple:rStipple,
+    zigzag:rZigzag,scallop:rScallop,picot:rPicot,
+    prog:rProg,dst:rDST,photo:rPhoto,
+  };
+  (fn[stitch.id]||rSatin)(ctx,src,fab,fc,S);
+}
+
+// ══════════════════════════════════════════════
+// REAL STITCH RENDERERS
+// Each draws actual thread geometry, not just pixels
+// ══════════════════════════════════════════════
+
+// 1. SATIN — angled parallel thread strands with shimmer
+function rSatin(ctx,src,fab,fc,S){
+  const ANGLE=Math.PI/4;// 45° stitch angle
+  const TH=Math.max(1.2,S*.75);
+  const cos=Math.cos(ANGLE),sin=Math.sin(ANGLE);
+  for(let y=0;y<src.height;y++){
+    for(let x=0;x<src.width;x++){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(isBg(R,G,B,A,fc))continue;
+      const cx=x*S+S/2,cy=y*S+S/2;
+      const hl=S*.6;
+      const x1=cx-cos*hl,y1=cy-sin*hl,x2=cx+cos*hl,y2=cy+sin*hl;
+      // shim based on angle: max at 45°
+      const shim=.6+.4*Math.abs(Math.sin(x*.4+y*.3));
+      drawThread(ctx,x1,y1,x2,y2,R,G,B,TH,shim);
+    }
+  }
+}
+
+// 2. TATAMI — brick-row run stitches
+function rTatami(ctx,src,fab,fc,S){
+  const RL=S*3.5,TH=Math.max(1,S*.7);
+  for(let y=0;y<src.height;y++){
+    const off=(y%2===0?0:S*1.5);
+    for(let x=0;x<src.width;x++){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(isBg(R,G,B,A,fc))continue;
+      const bx=x*S+off,by=y*S+S/2;
+      drawThread(ctx,bx,by,bx+RL,by,R,G,B,TH,.3);
+    }
+  }
+}
+
+// 3. SEED — scattered short stitches of random angle
+function rSeed(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.5);
+  // deterministic random using position
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const hash=(x*2654435761^y*2246822519)>>>0;
+    if(hash%3===0)continue;// sparse
+    const ang=(hash%628)/100;// 0..2π
+    const len=S*(.6+(hash%4)*.25);
+    const cx=x*S+S/2,cy=y*S+S/2;
+    drawThread(ctx,cx-Math.cos(ang)*len/2,cy-Math.sin(ang)*len/2,cx+Math.cos(ang)*len/2,cy+Math.sin(ang)*len/2,R,G,B,TH,.2);
+  }
+}
+
+// 4. SPIRAL — concentric ring stitches within each 8×8 block
+function rSpiral(ctx,src,fab,fc,S){
+  const BS=8;
+  for(let gy=0;gy<Math.ceil(src.height/BS);gy++)for(let gx=0;gx<Math.ceil(src.width/BS);gx++){
+    const px=gx*BS+Math.floor(BS/2),py=gy*BS+Math.floor(BS/2);
+    if(px>=src.width||py>=src.height)continue;
+    const i=(py*src.width+px)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=gx*BS*S+BS*S/2,cy=gy*BS*S+BS*S/2;
+    const TH=Math.max(1,S*.55);
+    let prevX=cx,prevY=cy;
+    for(let t=0.3;t<Math.PI*5;t+=.25){
+      const r=t*S*.55;
+      const nx=cx+Math.cos(t)*r,ny=cy+Math.sin(t)*r;
+      if(Math.abs(nx-cx)>BS*S/2+S||Math.abs(ny-cy)>BS*S/2+S)break;
+      drawThread(ctx,prevX,prevY,nx,ny,R,G,B,TH,.25);
+      prevX=nx;prevY=ny;
+    }
+  }
+}
+
+// 5. CONTOUR — concentric offset outlines
+function rContour(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.65);
+  for(let pass=0;pass<5;pass++){
+    for(let y=pass;y<src.height-pass;y++)for(let x=pass;x<src.width-pass;x++){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(isBg(R,G,B,A,fc))continue;
+      // Is this pixel on the 'pass'-th inset ring?
+      let ring=false;
+      const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+      for(const[dx,dy]of dirs){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=src.width||ny>=src.height){ring=true;break;}const ni=(ny*src.width+nx)*4;if(isBg(src.data[ni],src.data[ni+1],src.data[ni+2],src.data[ni+3],fc)){ring=true;break;}}
+      if(pass===0&&!ring)continue;
+      if(pass>0){// check if we're exactly at this ring depth
+        let depth=0;for(let d=1;d<=pass;d++){let hit=false;for(const[dx,dy]of dirs){const nx=x+dx*d,ny=y+dy*d;if(nx<0||ny<0||nx>=src.width||ny>=src.height){hit=true;break;}const ni=(ny*src.width+nx)*4;if(isBg(src.data[ni],src.data[ni+1],src.data[ni+2],src.data[ni+3],fc)){hit=true;break;}}if(hit){depth=d;break;}}
+        if(depth!==pass)continue;
+      }
+      const shim=pass%2===0?.4:.2;
+      const bx=x*S,by=y*S;
+      drawThread(ctx,bx,by+S/2,bx+S,by+S/2,clamp(R+(pass%2?10:-10)),G,B,TH,shim);
+    }
+  }
+}
+
+// 6. RADIAL — spokes from centre
+function rRadial(ctx,src,fab,fc,S){
+  const cx0=src.width/2,cy0=src.height/2;const TH=Math.max(1,S*.65);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const angle=Math.atan2(y-cy0,x-cx0);
+    const len=S*1.1;const px=x*S+S/2,py=y*S+S/2;
+    drawThread(ctx,px-Math.cos(angle)*len/2,py-Math.sin(angle)*len/2,px+Math.cos(angle)*len/2,py+Math.sin(angle)*len/2,R,G,B,TH,.5);
+  }
+}
+
+// 7. RUNNING — dashed edge-following stitches
+function rRun(ctx,src,fab,fc,S){
+  const TH=Math.max(1.2,S*.5);
+  for(let y=1;y<src.height-1;y++)for(let x=1;x<src.width-1;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(A<80)continue;
+    if((x+y)%2!==0)continue;// every other = dashed look
+    const ri=(y*src.width+x+1)*4,di=((y+1)*src.width+x)*4;
+    const l=lumRGB(R,G,B),r2=lumRGB(src.data[ri],src.data[ri+1],src.data[ri+2]),d=lumRGB(src.data[di],src.data[di+1],src.data[di+2]);
+    if(Math.abs(l-r2)<18&&Math.abs(l-d)<18)continue;
+    const angle=Math.atan2(d-l,r2-l)||.5;const len=S*1.3;
+    const cx=x*S+S/2,cy=y*S+S/2;
+    drawThread(ctx,cx-Math.cos(angle)*len/2,cy-Math.sin(angle)*len/2,cx+Math.cos(angle)*len/2,cy+Math.sin(angle)*len/2,R,G,B,TH,.3);
+  }
+}
+
+// 8. BEAN / TRIPLE RUN — 3× over same path
+function rBean(ctx,src,fab,fc,S){
+  const TH=Math.max(1.5,S*.55);
+  for(let y=1;y<src.height-1;y++)for(let x=1;x<src.width-1;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(A<80)continue;
+    const ri=(y*src.width+x+1)*4,di=((y+1)*src.width+x)*4;
+    const l=lumRGB(R,G,B),r2=lumRGB(src.data[ri],src.data[ri+1],src.data[ri+2]),d=lumRGB(src.data[di],src.data[di+1],src.data[di+2]);
+    if(Math.abs(l-r2)<18&&Math.abs(l-d)<18)continue;
+    const angle=Math.atan2(d-l,r2-l)||.5;const len=S*2;
+    const cx=x*S+S/2,cy=y*S+S/2;
+    for(let p=-0.7;p<=0.7;p+=0.7){// 3 passes slightly offset
+      const perp=angle+Math.PI/2;
+      drawThread(ctx,cx-Math.cos(angle)*len/2+Math.cos(perp)*p,cy-Math.sin(angle)*len/2+Math.sin(perp)*p,cx+Math.cos(angle)*len/2+Math.cos(perp)*p,cy+Math.sin(angle)*len/2+Math.sin(perp)*p,R,G,B,TH,.4);
+    }
+  }
+}
+
+// 9. STEM — overlapping at midpoint, twisted rope
+function rStem(ctx,src,fab,fc,S){
+  const TH=Math.max(1.5,S*.7);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const BASE_ANGLE=Math.PI/6+(((x*31+y*17)%100)/100)*.3;
+    const len=S*1.8;const cx=x*S+S/2,cy=y*S+S/2;
+    // Draw overlapping at midpoint to simulate stem rope
+    drawThread(ctx,cx,cy,cx+Math.cos(BASE_ANGLE)*len,cy+Math.sin(BASE_ANGLE)*len,R,G,B,TH,.5);
+    drawThread(ctx,cx-Math.cos(BASE_ANGLE)*len*.5,cy-Math.sin(BASE_ANGLE)*len*.5,cx+Math.cos(BASE_ANGLE)*len*.5,cy+Math.sin(BASE_ANGLE)*len*.5,clamp(R+20),G,clamp(B+10),TH*.7,.6);
+  }
+}
+
+// 10. BACK STITCH — solid continuous line
+function rBack(ctx,src,fab,fc,S){
+  const TH=Math.max(1.5,S*.65);
+  for(let y=0;y<src.height;y+=2){
+    let prevX=-1,prevY=-1,prevR=0,prevG=0,prevB=0;
+    for(let x=0;x<src.width;x++){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(isBg(R,G,B,A,fc)){prevX=-1;continue;}
+      const cx=x*S+S/2,cy=y*S+S/2;
+      if(prevX>=0)drawThread(ctx,cx,cy,prevX,prevY,prevR,prevG,prevB,TH,.35);
+      prevX=cx;prevY=cy;prevR=R;prevG=G;prevB=B;
+    }
+  }
+}
+
+// 11. STRAIGHT — individual free stitches
+function rStraight(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.55);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const hash=(x*2654435761^y*2246822519)>>>0;
+    if(hash%3!==0)continue;
+    const ang=(hash%628)/100;const len=S*(1+((hash>>8)%4)*.35);
+    const cx=x*S+S/2,cy=y*S+S/2;
+    drawThread(ctx,cx-Math.cos(ang)*len/2,cy-Math.sin(ang)*len/2,cx+Math.cos(ang)*len/2,cy+Math.sin(ang)*len/2,R,G,B,TH,.25);
+  }
+}
+
+// 12. CHAIN — interlocked ovals with lock stitch
+function rChain(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.55);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=x*S+S/2,cy=y*S+S/2;const a=(y%2===0)?0:Math.PI/2;
+    // Oval outline — simulate with 8-segment polygon
+    ctx.save();ctx.strokeStyle=`rgb(${R},${G},${B})`;ctx.lineWidth=TH;ctx.lineCap='round';
+    const rx=S*.75,ry=S*.42;
+    ctx.beginPath();
+    for(let t=0;t<=Math.PI*2+.1;t+=.4){ctx.lineTo(cx+Math.cos(t+a)*rx,cy+Math.sin(t+a)*ry);}
+    ctx.stroke();
+    // Lock dot
+    ctx.fillStyle=`rgb(${clamp(R-20)},${clamp(G-20)},${clamp(B-20)})`;
+    ctx.beginPath();ctx.arc(cx,cy,TH*.55,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+}
+
+// 13. FEATHER — alternating Y-branches
+function rFeather(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.5);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=x*S+S/2,cy=y*S+S/2;const dir=y%2===0?1:-1;
+    drawThread(ctx,cx,cy-S*.65,cx,cy+S*.65,R,G,B,TH,.1);// spine
+    drawThread(ctx,cx,cy,cx-S*.8,cy-dir*S*.55,R,G,B,TH,.35);// left branch
+    drawThread(ctx,cx,cy,cx+S*.8,cy+dir*S*.55,R,G,B,TH,.35);// right branch
+  }
+}
+
+// 14. BLANKET — bar + loop
+function rBlanket(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.5);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const bx=x*S,by=y*S;
+    // Vertical leg
+    drawThread(ctx,bx+S*.1,by,bx+S*.1,by+S,R,G,B,TH,.1);
+    // Horizontal bar at top
+    drawThread(ctx,bx,by,bx+S,by,R,G,B,TH,.3);
+  }
+}
+
+// 15. FLY — Y-shape with anchor
+function rFly(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.5);
+  for(let y=0;y<src.height;y+=2)for(let x=0;x<src.width;x+=2){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=x*S+S,cy=y*S+S;
+    drawThread(ctx,cx-S*.9,cy-S*.5,cx,cy,R,G,B,TH,.3);
+    drawThread(ctx,cx+S*.9,cy-S*.5,cx,cy,R,G,B,TH,.3);
+    drawThread(ctx,cx,cy,cx,cy+S*.85,R,G,B,TH,.2);
+    // anchor dot
+    ctx.fillStyle=`rgb(${R},${G},${B})`;ctx.beginPath();ctx.arc(cx,cy+S*.85,TH*.6,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// 16. CROSS — two-pass diagonal
+function rCross(ctx,src,fab,fc,S){
+  const SP=S;const TH=Math.max(1.2,SP*.5);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const bx=x*SP+1,by=y*SP+1,ex=x*SP+SP-1,ey=y*SP+SP-1;
+    // Bottom leg (darker — under)
+    drawThread(ctx,bx,ey,ex,by,clamp(R-20),clamp(G-20),clamp(B-20),TH,.15);
+    // Top leg (lighter — over, with twist highlight)
+    drawThread(ctx,bx,by,ex,ey,R,G,B,TH,.55);
+    // Intersection dot
+    const mx=(bx+ex)/2,my=(by+ey)/2;
+    ctx.fillStyle=`rgb(${clamp(R+15)},${clamp(G+15)},${clamp(B+15)})`;
+    ctx.beginPath();ctx.arc(mx,my,TH*.4,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// 17. PADDED SATIN — layered 3D with base layer visible
+function rPaddedSatin(ctx,src,fab,fc,S){
+  // Pass 1: diagonal base (darker)
+  const ANGLE1=Math.PI/3,ANGLE2=Math.PI/4;
+  const TH=Math.max(1.4,S*.85);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=x*S+S/2,cy=y*S+S/2;const l=S*.6;
+    // Base layer
+    drawThread(ctx,cx-Math.cos(ANGLE1)*l,cy-Math.sin(ANGLE1)*l,cx+Math.cos(ANGLE1)*l,cy+Math.sin(ANGLE1)*l,clamp(R-30),clamp(G-30),clamp(B-30),TH,.1);
+  }
+  // Pass 2: top satin (brighter shimmer)
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=x*S+S/2,cy=y*S+S/2;const l=S*.62;
+    const shim=.5+.5*Math.abs(Math.sin(x*.5));
+    drawThread(ctx,cx-Math.cos(ANGLE2)*l,cy-Math.sin(ANGLE2)*l,cx+Math.cos(ANGLE2)*l,cy+Math.sin(ANGLE2)*l,R,G,B,TH,shim);
+  }
+}
+
+// 18. MOTIF FILL — star motifs at grid points
+function rMotif(ctx,src,fab,fc,S){
+  const BS=6;const TH=Math.max(1,S*.45);
+  for(let gy=0;gy<Math.ceil(src.height/BS);gy++)for(let gx=0;gx<Math.ceil(src.width/BS);gx++){
+    const px=gx*BS+Math.floor(BS/2),py=gy*BS+Math.floor(BS/2);
+    if(px>=src.width||py>=src.height)continue;
+    const i=(py*src.width+px)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=gx*BS*S+BS*S/2,cy=gy*BS*S+BS*S/2;const r=S*1.6;
+    // Star: 5 spokes
+    for(let k=0;k<5;k++){
+      const ang=k*Math.PI*2/5-Math.PI/2;
+      drawThread(ctx,cx,cy,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,R,G,B,TH,.25);
+    }
+    // Circle
+    ctx.strokeStyle=`rgb(${R},${G},${B})`;ctx.lineWidth=TH*.7;
+    ctx.beginPath();ctx.arc(cx,cy,r*.38,0,Math.PI*2);ctx.stroke();
+  }
+}
+
+// 19. STIPPLE — meandering path
+function rStipple(ctx,src,fab,fc,S){
+  const pts=[];
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4;if(!isBg(src.data[i],src.data[i+1],src.data[i+2],src.data[i+3],fc))pts.push({x,y,r:src.data[i],g:src.data[i+1],b:src.data[i+2]});
+  }
+  if(!pts.length)return;
+  // Sort into meander (raster scan with alternating direction)
+  pts.sort((a,b)=>a.y!==b.y?a.y-b.y:(a.y%2===0?a.x-b.x:b.x-a.x));
+  const step=Math.max(1,Math.floor(pts.length/400));const TH=Math.max(1,S*.5);
+  for(let k=step;k<pts.length;k+=step){
+    const a=pts[k-step],b=pts[k];
+    drawThread(ctx,a.x*S+S/2,a.y*S+S/2,b.x*S+S/2,b.y*S+S/2,a.r,a.g,a.b,TH,.2);
+  }
+}
+
+// 20. ZIGZAG — alternating diagonal with consistent bite
+function rZigzag(ctx,src,fab,fc,S){
+  const TH=Math.max(1.2,S*.55);
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const bx=x*S,by=y*S,dir=y%2===0?1:-1;
+    // Two diagonals forming a V
+    drawThread(ctx,bx,by+S/2,bx+S/2,by+S/2-dir*S*.7,R,G,B,TH,.35);
+    drawThread(ctx,bx+S/2,by+S/2-dir*S*.7,bx+S,by+S/2+dir*S*.7,R,G,B,TH,.35);
+  }
+}
+
+// 21. SCALLOP — fan satin stitches forming arcs
+function rScallop(ctx,src,fab,fc,S){
+  const BS=8;const TH=Math.max(1,S*.5);
+  for(let gy=0;gy<Math.ceil(src.height/BS);gy++)for(let gx=0;gx<Math.ceil(src.width/BS);gx++){
+    const px=gx*BS,py=gy*BS+Math.floor(BS*.6);
+    if(px>=src.width||py>=src.height)continue;
+    const i=(py*src.width+px)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=gx*BS*S+BS*S/2,cy=gy*BS*S+BS*S*.65;const r=BS*S*.55;
+    // Fan of radial stitches
+    for(let t=0;t<=Math.PI;t+=Math.PI/7){
+      drawThread(ctx,cx,cy,cx+Math.cos(Math.PI+t)*r,cy+Math.sin(Math.PI+t)*r,R,G,B,TH,.4);
+    }
+  }
+}
+
+// 22. PICOT — anchor loops
+function rPicot(ctx,src,fab,fc,S){
+  const BS=5;const TH=Math.max(1,S*.45);
+  for(let gy=0;gy<Math.ceil(src.height/BS);gy++)for(let gx=0;gx<Math.ceil(src.width/BS);gx++){
+    const px=gx*BS,py=gy*BS;if(px>=src.width||py>=src.height)continue;
+    const i=(py*src.width+px)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(isBg(R,G,B,A,fc))continue;
+    const cx=gx*BS*S+BS*S/2,cy=gy*BS*S+BS*S*.4;
+    // Loop shape: two anchor stitches + arc
+    drawThread(ctx,cx-S*.5,cy+S*.6,cx-S*.9,cy-S*.8,R,G,B,TH,.2);
+    drawThread(ctx,cx+S*.5,cy+S*.6,cx+S*.9,cy-S*.8,R,G,B,TH,.2);
+    ctx.strokeStyle=`rgb(${R},${G},${B})`;ctx.lineWidth=TH;
+    ctx.beginPath();ctx.arc(cx,cy-S*.5,S*.7,Math.PI*.15,Math.PI*.85);ctx.stroke();
+  }
+}
+
+// 23. PROGRAMMABLE — DST snake scan
+function rProg(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.55);let lX=-1,lY=-1,lR=0,lG=0,lB=0;
+  for(let y=0;y<src.height;y++){
+    const xs=y%2===0?range(0,src.width):range(src.width-1,-1,-1);
+    for(const x of xs){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(isBg(R,G,B,A,fc)){lX=-1;continue;}
+      const cx=x*S+S/2,cy=y*S+S/2;
+      if(lX>=0)drawThread(ctx,lX,lY,cx,cy,lR,lG,lB,TH,.3);
+      // Lock stitch dot
+      ctx.fillStyle=`rgb(${clamp(R-25)},${clamp(G-25)},${clamp(B-25)})`;ctx.beginPath();ctx.arc(cx,cy,TH*.4,0,Math.PI*2);ctx.fill();
+      lX=cx;lY=cy;lR=R;lG=G;lB=B;
+    }
+  }
+}
+
+// 24. DST PATH TRACE — shows jump stitches in orange
+function rDST(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.5);let lX=-1,lY=-1,prevSkip=false;
+  for(let y=0;y<src.height;y+=2){
+    for(let x=0;x<src.width;x++){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(A<80||isBg(R,G,B,A,fc)){
+        if(lX>=0){// draw jump stitch
+          ctx.save();ctx.setLineDash([S*1.2,S*.8]);ctx.strokeStyle='rgba(255,120,30,.7)';ctx.lineWidth=TH*.6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(lX,lY);ctx.lineTo(x*S,y*S);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+        }
+        lX=-1;continue;
+      }
+      const cx=x*S+S/2,cy=y*S+S/2;
+      if(lX>=0)drawThread(ctx,lX,lY,cx,cy,R,G,B,TH,.3);
+      ctx.fillStyle=`rgb(${clamp(R-30)},${clamp(G-30)},${clamp(B-30)})`;ctx.beginPath();ctx.arc(cx,cy,TH*.35,0,Math.PI*2);ctx.fill();
+      lX=cx;lY=cy;
+    }
+  }
+}
+
+// 25. PHOTO STITCH — luminance-driven density
+function rPhoto(ctx,src,fab,fc,S){
+  const TH=Math.max(1,S*.55);
+  for(let y=0;y<src.height;y+=2){
+    const dir=(y%4===0)?1:-1;
+    const xs=dir>0?range(0,src.width):range(src.width-1,-1,-1);
+    let pX=-1,pY=-1,pR=0,pG=0,pB=0;
+    for(const x of xs){
+      const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+      if(A<80){pX=-1;continue;}
+      const lum=lumRGB(R,G,B)/255;const density=1-lum;
+      // dense dark areas = small steps, sparse light = skip
+      const hash=(x*31+y*17)%100;if(hash>density*120)continue;
+      const cx=x*S+S/2,cy=y*S+S/2;
+      const sLen=S*(0.8+density*1.6);
+      drawThread(ctx,cx,cy,cx+sLen*dir,cy,R,G,B,TH*(.5+density*.5),.2+density*.4);
+      pX=cx;pY=cy;pR=R;pG=G;pB=B;
+    }
+  }
+}
+
+function range(s,e,step=1){const a=[];if(step>0)for(let i=s;i<e;i+=step)a.push(i);else for(let i=s;i>e;i+=step)a.push(i);return a;}
+
+// ══════════════════════════════════════════════
+// DMC CHART
+// ══════════════════════════════════════════════
+function drawChart(src,palette){
+  const CELL=12,W=src.width*CELL,H=src.height*CELL;
+  const cvs=setupCanvas('cvsChart',W,H),ctx=cvs.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  const syms=['×','○','△','□','◇','★','▲','●','⊕','⊗'];
+  for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2],A=src.data[i+3];
+    if(A<80||(R>230&&G>230&&B>230))continue;
+    let best=0,bd=Infinity;palette.forEach((c,j)=>{const d=Math.hypot(R-c.rgb[0],G-c.rgb[1],B-c.rgb[2]);if(d<bd){bd=d;best=j;}});
+    const col=palette[best],cx=x*CELL,cy=y*CELL;
+    ctx.fillStyle=col.hex;ctx.fillRect(cx,cy,CELL,CELL);
+    ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=.4;ctx.strokeRect(cx+.2,cy+.2,CELL-.4,CELL-.4);
+    const l=lumRGB(col.rgb[0],col.rgb[1],col.rgb[2]);
+    ctx.fillStyle=l>140?'rgba(0,0,0,.7)':'rgba(255,255,255,.85)';
+    ctx.font=`bold ${Math.round(CELL*.6)}px monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(syms[best%syms.length],cx+CELL/2,cy+CELL/2);
+  }
+  document.getElementById('chartLegend').innerHTML=palette.map((c,i)=>
+    `<div style="display:flex;align-items:center;gap:5px;font-size:10px"><div style="width:14px;height:14px;background:${c.hex};border:1px solid rgba(0,0,0,.15);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-family:monospace;font-weight:bold;color:${lumRGB(...c.rgb)>140?'#000':'#fff'}">${syms[i%syms.length]}</div><span style="color:var(--muted)">${c.dmc} · ${c.name}</span></div>`).join('');
+}
+
+function drawOutline(src){
+  const S=3,W=src.width*S,H=src.height*S;
+  const cvs=setupCanvas('cvsOutline',W,H),ctx=cvs.getContext('2d');
+  ctx.fillStyle='#f7f4ef';ctx.fillRect(0,0,W,H);
+  for(let y=1;y<src.height-1;y++)for(let x=1;x<src.width-1;x++){
+    const i=(y*src.width+x)*4,R=src.data[i],G=src.data[i+1],B=src.data[i+2];
+    const ri=(y*src.width+x+1)*4,di=((y+1)*src.width+x)*4;
+    const l=lumRGB(R,G,B),r2=lumRGB(src.data[ri],src.data[ri+1],src.data[ri+2]),d=lumRGB(src.data[di],src.data[di+1],src.data[di+2]);
+    if(Math.abs(l-r2)<20&&Math.abs(l-d)<20)continue;
+    ctx.fillStyle=`rgb(${R},${G},${B})`;ctx.fillRect(x*S,y*S,S,S);
+  }
+}
+
+// ══════════════════════════════════════════════
+// COLOR EXTRACTION
+// ══════════════════════════════════════════════
+function extractPalette(data,k){
+  const pixels=[],step=Math.max(1,Math.floor(data.length/4/2000));
+  for(let i=0;i<data.length;i+=4*step){const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];if(a<128||lumRGB(r,g,b)>240)continue;pixels.push([r,g,b]);}
+  if(!pixels.length)return[{rgb:[100,100,100],hex:'#646464',pct:100,name:'Gray',dmc:'DMC 415'}];
+  let clusters=[pixels];
+  while(clusters.length<k){
+    let li=0;clusters.forEach((c,i)=>{if(c.length>clusters[li].length)li=i;});
+    const cl=clusters[li];if(cl.length<2)break;
+    let rng=[[255,0],[255,0],[255,0]];
+    cl.forEach(p=>p.forEach((v,i)=>{rng[i][0]=Math.min(rng[i][0],v);rng[i][1]=Math.max(rng[i][1],v);}));
+    const ch=rng.map(r=>r[1]-r[0]).indexOf(Math.max(...rng.map(r=>r[1]-r[0])));
+    cl.sort((a,b)=>a[ch]-b[ch]);const mid=Math.floor(cl.length/2);
+    clusters.splice(li,1,cl.slice(0,mid),cl.slice(mid));
+  }
+  const pal=clusters.filter(c=>c.length>0).map(c=>{
+    const avg=c.reduce((a,p)=>[a[0]+p[0],a[1]+p[1],a[2]+p[2]],[0,0,0]).map(v=>Math.round(v/c.length));
+    return{rgb:avg,hex:rgbHex(avg[0],avg[1],avg[2]),pct:Math.round(c.length/pixels.length*100),name:colorName(avg[0],avg[1],avg[2]),dmc:dmcCode(avg[0],avg[1],avg[2])};
+  });
+  pal.sort((a,b)=>b.pct-a.pct);
+  const tot=pal.reduce((s,c)=>s+c.pct,0);if(tot>0)pal.forEach(c=>c.pct=Math.round(c.pct/tot*100));
+  return pal;
+}
+
+// ══════════════════════════════════════════════
+// METRICS & RESULT
+// ══════════════════════════════════════════════
+function calcMetrics(iD){
+  const{data,width,height}=iD;let edges=0;
+  for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){
+    const i=(y*width+x)*4,l=lumRGB(data[i],data[i+1],data[i+2]);
+    const r=lumRGB(data[(y*width+x+1)*4],data[(y*width+x+1)*4+1],data[(y*width+x+1)*4+2]);
+    const d=lumRGB(data[((y+1)*width+x)*4],data[((y+1)*width+x)*4+1],data[((y+1)*width+x)*4+2]);
+    if(Math.abs(l-r)>20||Math.abs(l-d)>20)edges++;
+  }
+  const cs=new Set(),step=Math.max(1,Math.floor(data.length/4/1200));
+  for(let i=0;i<data.length;i+=4*step){if(data[i+3]<128)continue;cs.add((data[i]>>4<<8)|(data[i+1]>>4<<4)|(data[i+2]>>4));}
+  return{edgeDensity:edges/(width*height),colorComplexity:Math.min(cs.size/60,1)};
+}
+
+function buildResult(metrics,palette,w,h,budget,stitch,fabric){
+  const cmW=(w/96*2.54).toFixed(1),cmH=(h/96*2.54).toFixed(1),areaCm=parseFloat((cmW*cmH).toFixed(1));
+  const cx=Math.min(1,metrics.edgeDensity*3+metrics.colorComplexity*.5);
+  const cl=cx<.2?'Simple':cx<.45?'Moderate':cx<.7?'Complex':'Highly Complex';
+  const stitchCount=Math.round(areaCm*(100+Math.round(cx*120))*stitch.density);
+  const threadCount=Math.round(stitchCount*2.5*stitch.dm);
+  const numColors=Math.max(2,palette.length);
+  const hours=Math.max(1,Math.round(stitchCount/Math.round((2200-cx*1100)*stitch.dm)));
+  const totalSkeins=numColors*Math.max(1,Math.round(stitchCount/numColors/900));
+  const fabricCost=fabric.id==='silk'?800:fabric.id==='leather'?600:fabric.id==='organza'?400:100+Math.round(cx*180);
+  const threadCost=totalSkeins*22,stabCost=['felt','canvas','aida'].includes(fabric.id)?0:fabric.id==='leather'?0:120;
+  const misc=95,labor=hours*200;
+  const total=fabricCost+threadCost+stabCost+misc+labor;
+  const feasibility=total<=budget?'Feasible':total<=budget*1.3?'Tight':'Over Budget';
+  return{cmW,cmH,areaCm,complexityLabel:cl,stitchCount,threadCount,numColors,hours,totalSkeins,
+    stitchName:stitch.name,fabricName:fabric.name,stab:fabric.stab,needle:fabric.needle,tension:fabric.tension,
+    palette,fabricCost,threadCost,stabCost,misc,labor,total,feasibility,
+    materials:[{item:fabric.name+' Fabric',qty:`1pc (${cmW}×${cmH}cm)`,cost:fabricCost},{item:`DMC Thread (${numColors} colors)`,qty:totalSkeins+' skeins',cost:threadCost},{item:'Stabilizer ('+fabric.stab+')',qty:'1 sheet',cost:stabCost},{item:'Needle + misc',qty:'Set',cost:misc}],
+    tips:[
+      '🪡 '+stitch.desc.split('.')[0]+'.',
+      '🧵 '+fabric.desc,
+      '📐 Use '+fabric.stab+' stabilizer · '+fabric.needle+' needle · '+fabric.tension+' tension.',
+      '🎨 '+numColors+' DMC colors — sort & label bobbins before starting.',
+      '⏱ Est. '+hours+' hour'+(hours>1?'s':'')+' machine time. Run a test on scrap fabric first.',
+      '💡 Complexity: '+cl+'.'+(cx>.6?' Reduce density 10% to prevent puckering.':' Good density for this design.'),
+    ],
+    summary:`This ${cl.toLowerCase()} design (~${cmW}×${cmH}cm) uses ${stitch.name} on ${fabric.name}. ~${stitchCount.toLocaleString()} stitches, ${threadCount.toLocaleString()} thread segments, ${numColors} DMC colors. Machine time: ~${hours}h.`,
+  };
+}
+
+function renderResult(r,budget){
+  document.getElementById('statGrid').innerHTML=[
+    {l:'Stitch Count',v:r.stitchCount.toLocaleString(),u:''},
+    {l:'Thread Segments',v:r.threadCount.toLocaleString(),u:''},
+    {l:'Machine Time',v:r.hours,u:'hrs'},
+    {l:'Complexity',v:r.complexityLabel,u:''},
+    {l:'DMC Colors',v:r.numColors,u:'colors'},
+    {l:'Thread Skeins',v:r.totalSkeins,u:'skeins'},
+  ].map(s=>`<div class="stat-card"><div class="stat-lbl">${s.l}</div><div class="stat-val">${s.v}<span class="stat-unit"> ${s.u}</span></div></div>`).join('');
+  document.getElementById('colorBar').innerHTML=r.palette.map(c=>`<div style="flex:${c.pct};background:${c.hex}"></div>`).join('');
+  document.getElementById('colorGrid').innerHTML=r.palette.map(c=>`<div class="color-chip"><div class="swatch" style="background:${c.hex}"></div><div><div class="chip-name">${c.name}</div><div class="chip-meta">${c.hex} · ${c.dmc} · ${c.pct}%</div></div></div>`).join('');
+  document.getElementById('fabGrid').innerHTML=[{k:'Stitch',v:r.stitchName},{k:'Fabric',v:r.fabricName},{k:'Stabilizer',v:r.stab},{k:'Needle',v:r.needle},{k:'Tension',v:r.tension},{k:'Size',v:`${r.cmW}×${r.cmH} cm`}].map(d=>`<div class="det-cell"><div class="det-key">${d.k}</div><div class="det-val">${d.v}</div></div>`).join('');
+  document.getElementById('matTbl').innerHTML=`<thead><tr><th>Item</th><th>Qty</th><th style="text-align:right">₹</th></tr></thead><tbody>${r.materials.map(m=>`<tr><td>${m.item}</td><td>${m.qty}</td><td style="text-align:right">${m.cost.toLocaleString('en-IN')}</td></tr>`).join('')}<tr><td>Labour (${r.hours}h)</td><td></td><td style="text-align:right">${r.labor.toLocaleString('en-IN')}</td></tr><tr class="tot"><td colspan="2">Total</td><td style="text-align:right">₹${r.total.toLocaleString('en-IN')}</td></tr></tbody>`;
+  renderBudget(r,budget);
+  document.getElementById('sumBox').textContent=r.summary;
+  document.getElementById('tipsList').innerHTML=r.tips.map(t=>`<li><span style="font-size:14px;flex-shrink:0">${t.slice(0,2)}</span><span>${t.slice(2)}</span></li>`).join('');
+}
+function renderBudget(r,budget){
+  const pct=Math.min(100,Math.round(r.total/budget*100));
+  const fC=r.feasibility==='Feasible'?'#2d6a4f':r.feasibility==='Tight'?'#b5451b':'#922b21';
+  const fB=r.feasibility==='Feasible'?'#d8f3dc':r.feasibility==='Tight'?'#fdebd0':'#fce8e8';
+  const bC=pct<=80?'#52b788':pct<=100?'#f4a261':'#e63946';
+  const diff=Math.abs(r.total-budget);
+  document.getElementById('bdgSec').innerHTML=`<div class="stat-grid" style="margin-bottom:.75rem"><div class="stat-card"><div class="stat-lbl">Estimated</div><div class="stat-val">₹${r.total.toLocaleString('en-IN')}</div></div><div class="stat-card"><div class="stat-lbl">Budget</div><div class="stat-val">₹${budget.toLocaleString('en-IN')}</div></div><div class="stat-card"><div class="stat-lbl">Materials</div><div class="stat-val">₹${(r.total-r.labor).toLocaleString('en-IN')}</div></div></div><div class="bdg-track"><div class="bdg-fill" style="width:${Math.min(100,pct)}%;background:${bC}"></div></div><div class="bdg-lbl-row"><span>${r.total<=budget?'₹'+diff.toLocaleString('en-IN')+' under':'₹'+diff.toLocaleString('en-IN')+' over'} budget</span><span>${pct}%</span></div><span class="feas-badge" style="background:${fB};color:${fC}">${r.feasibility}</span>`;
+}
+
+// ══════════════════════════════════════════════
+// COLOR UTILITIES
+// ══════════════════════════════════════════════
+function colorName(r,g,b){const n=[[[220,36,36],'Red'],[[183,18,52],'Dark Red'],[[255,100,80],'Coral'],[[255,165,0],'Orange'],[[255,200,50],'Amber'],[[255,255,0],'Yellow'],[[50,150,50],'Green'],[[0,128,0],'Dark Green'],[[0,150,150],'Teal'],[[0,180,255],'Sky Blue'],[[30,80,180],'Blue'],[[100,50,200],'Violet'],[[200,100,150],'Pink'],[[180,120,80],'Tan'],[[100,60,30],'Brown'],[[200,200,200],'Silver'],[[128,128,128],'Gray'],[[50,50,50],'Charcoal'],[[200,150,50],'Gold'],[[240,230,210],'Cream']];let best='Custom',bd=Infinity;n.forEach(([rgb,nm])=>{const d=Math.hypot(r-rgb[0],g-rgb[1],b-rgb[2]);if(d<bd){bd=d;best=nm;}});return best;}
+function dmcCode(r,g,b){const d=[[[220,36,36],'DMC 321'],[[183,18,52],'DMC 816'],[[255,100,80],'DMC 351'],[[255,165,0],'DMC 740'],[[255,200,100],'DMC 3825'],[[50,150,50],'DMC 700'],[[0,120,180],'DMC 996'],[[30,60,160],'DMC 792'],[[100,50,200],'DMC 3746'],[[200,100,150],'DMC 3689'],[[180,120,80],'DMC 435'],[[100,60,30],'DMC 801'],[[200,200,200],'DMC 762'],[[128,128,128],'DMC 415'],[[50,50,50],'DMC 310'],[[200,150,50],'DMC 783']];let best='DMC 310',bd=Infinity;d.forEach(([rgb,code])=>{const dist=Math.hypot(r-rgb[0],g-rgb[1],b-rgb[2]);if(dist<bd){bd=dist;best=code;}});return best;}
+
+init();
+</script>
+</body>
+</html>
