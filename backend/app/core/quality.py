@@ -78,24 +78,62 @@ def validate_dst(data: bytes) -> Dict[str, Any]:
     }
 
 
-def parse_dst(data: bytes) -> Dict[str, Any]:
-    """Decode DST bytes into colour blocks for previewing (coordinates in mm, y down)."""
-    pattern = pyembroidery.read_dst(io.BytesIO(data))
+def parse_dst(data: bytes, filename: str = "design.dst") -> Dict[str, Any]:
+    """Decode machine embroidery bytes into colour blocks for previewing (coordinates in mm, y down).
+    Supports .dst, .pes, .exp, .jef, .vp3, .xxx formats."""
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else "dst"
+    stream = io.BytesIO(data)
+
+    readers = {
+        "pes": pyembroidery.read_pes,
+        "pec": pyembroidery.read_pec,
+        "dst": pyembroidery.read_dst,
+        "exp": pyembroidery.read_exp,
+        "jef": pyembroidery.read_jef,
+        "vp3": pyembroidery.read_vp3,
+        "xxx": pyembroidery.read_xxx,
+    }
+    pattern = None
+    reader = readers.get(ext)
+    if reader:
+        try:
+            pattern = reader(stream)
+        except Exception:
+            stream.seek(0)
+
+    if pattern is None or not pattern.stitches or len(pattern.stitches) <= 2:
+        for fallback_reader in [pyembroidery.read_dst, pyembroidery.read_pes, pyembroidery.read_exp, pyembroidery.read_jef, pyembroidery.read_vp3]:
+            try:
+                stream.seek(0)
+                p = fallback_reader(stream)
+                if p and p.stitches and len(p.stitches) > 2:
+                    pattern = p
+                    break
+            except Exception:
+                pass
+
     if pattern is None or not pattern.stitches:
-        raise ValueError("not a readable DST file")
+        raise ValueError("Could not parse file as a supported embroidery format")
 
     header: Dict[str, str] = {}
-    for field in data[:512].split(b"\r"):
-        if len(field) > 3 and field[2:3] == b":":
-            header[field[:2].decode("ascii", "ignore")] = field[3:].decode("ascii", "ignore").strip()
+    if data.startswith(b"LA:"):
+        for field in data[:512].split(b"\r"):
+            if len(field) > 3 and field[2:3] == b":":
+                header[field[:2].decode("ascii", "ignore")] = field[3:].decode("ascii", "ignore").strip()
+
+    colors: List[str] = []
+    if hasattr(pattern, "threadlist") and pattern.threadlist:
+        for t in pattern.threadlist:
+            if t is not None and hasattr(t, "hex_color"):
+                colors.append(t.hex_color())
 
     blocks: List[Dict[str, Any]] = [{"stitches": []}]
     last = (0.0, 0.0)
     lengths: List[float] = []
     n_stitch = n_jump = n_trim = 0
-    for x, y, cmd in pattern.stitches:
-        c = cmd & pyembroidery.COMMAND_MASK
-        mx, my = round(x / 10.0, 2), round(y / 10.0, 2)
+    for s in pattern.stitches:
+        c = s[2] & pyembroidery.COMMAND_MASK
+        mx, my = round(s[0] / 10.0, 2), round(s[1] / 10.0, 2)
         if c == pyembroidery.COLOR_CHANGE:
             if blocks[-1]["stitches"]:
                 blocks.append({"stitches": []})
@@ -117,19 +155,22 @@ def parse_dst(data: bytes) -> Dict[str, Any]:
     xs = [s[0] for b in blocks for s in b["stitches"]]
     ys = [s[1] for b in blocks for s in b["stitches"]]
     arr = np.array(lengths) if lengths else np.zeros(1)
-    return {
+    res = {
         "header": header,
         "blocks": blocks,
-        "bounds_mm": [min(xs), min(ys), max(xs), max(ys)],
+        "bounds_mm": [min(xs), min(ys), max(xs), max(ys)] if xs and ys else [0, 0, 0, 0],
         "stats": {
             "stitches": n_stitch,
             "jumps": n_jump,
             "trims": n_trim,
             "color_blocks": len(blocks),
-            "width_mm": round(max(xs) - min(xs), 1),
-            "height_mm": round(max(ys) - min(ys), 1),
+            "width_mm": round(max(xs) - min(xs), 1) if xs else 0,
+            "height_mm": round(max(ys) - min(ys), 1) if ys else 0,
             "avg_stitch_mm": round(float(arr.mean()), 2),
             "max_stitch_mm": round(float(arr.max()), 2),
             "file_bytes": len(data),
         },
     }
+    if colors:
+        res["colors"] = colors
+    return res

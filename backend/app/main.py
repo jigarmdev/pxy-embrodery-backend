@@ -352,7 +352,7 @@ async def parse_dst_file(file: UploadFile = File(...), fabric: str = Form("cotto
     if len(data) > 20 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="DST file too large")
     try:
-        result = parse_dst(data)
+        result = parse_dst(data, file.filename or "design.dst")
     except Exception:
         raise HTTPException(status_code=400, detail="Could not read this file as a DST embroidery file")
     result["name"] = file.filename or "design.dst"
