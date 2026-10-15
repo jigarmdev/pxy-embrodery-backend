@@ -15,7 +15,7 @@ interface Props {
 
 export default function ControlPanel({ width, setWidth, height, setHeight, file, setFile, onDigitize, onDownload, loading, hasStitches }: Props) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col gap-6">
+    <div className="bg-surface p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col gap-6">
       <div>
         <h2 className="text-xl font-bold text-gray-800 mb-4">Digitizing Controls</h2>
         

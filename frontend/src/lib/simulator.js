@@ -8,6 +8,8 @@ export const CATS=[
   {id:'digital',label:'Digital'},
 ];
 export const STITCHES=[
+  {id:'auto',    cat:'fill',   icon:'✦',name:'Auto',        sub:'Smart fill + satin',density:0.95,dm:1.0,
+   desc:'Picks the right stitch for each part of the artwork, like professional auto-digitizing: tatami fill with underlay for solid areas, satin columns that follow strokes and lettering, and a running stitch for hairlines.'},
   {id:'satin',   cat:'fill',   icon:'▬',name:'Satin',       sub:'Smooth fill',      density:1.0,dm:1.0,
    desc:'Dense parallel stitches at a consistent angle. Real satin stitch renders each thread as an overlapping strand with gloss shimmer based on angle.'},
   {id:'tatami',  cat:'fill',   icon:'▦',name:'Tatami',      sub:'Brick pattern',    density:0.8,dm:0.9,
@@ -102,24 +104,47 @@ function drawThread(ctx, x1, y1, x2, y2, R, G, B, thickness, shimAmt) {
     return;
   }
   const len = Math.hypot(x2-x1, y2-y1);
-  const angle = Math.atan2(y2-y1, x2-x1);
   const shim = shimAmt || 0;
-  ctx.save(); ctx.globalAlpha = .22;
-  ctx.strokeStyle = `rgb(${clamp(R-55)},${clamp(G-55)},${clamp(B-55)})`;
-  ctx.lineWidth = thickness + .8; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(x1+.7, y1+.7); ctx.lineTo(x2+.7, y2+.7); ctx.stroke();
-  ctx.restore();
+  
+  ctx.save(); 
+  
+  // 1. Realistic Drop Shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur = thickness * 1.5;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1.5;
+  
+  // 2. Base Thread
   ctx.strokeStyle = `rgb(${R},${G},${B})`;
-  ctx.lineWidth = thickness; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-  if (shim > 0 && len > 4) {
-    const perp = angle + Math.PI/2, off = thickness*.3;
-    ctx.save(); ctx.globalAlpha = shim*.45;
-    ctx.strokeStyle = `rgb(${clamp(R+55)},${clamp(G+55)},${clamp(B+55)})`;
-    ctx.lineWidth = Math.max(.5, thickness*.3); ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(x1+Math.cos(perp)*off, y1+Math.sin(perp)*off); ctx.lineTo(x2+Math.cos(perp)*off, y2+Math.sin(perp)*off); ctx.stroke();
-    ctx.restore();
+  ctx.lineWidth = thickness; 
+  ctx.lineCap = 'round';
+  ctx.beginPath(); 
+  ctx.moveTo(x1, y1); 
+  ctx.lineTo(x2, y2); 
+  ctx.stroke();
+  
+  // Clear shadow for highlights/lowlights
+  ctx.shadowColor = 'transparent';
+
+  // 3. Highlight (Center Light)
+  if (shim > 0 && len > 2) {
+    ctx.strokeStyle = `rgba(255,255,255,${shim*0.6})`;
+    ctx.lineWidth = Math.max(0.5, thickness * 0.35); 
+    ctx.beginPath(); 
+    ctx.moveTo(x1, y1); 
+    ctx.lineTo(x2, y2); 
+    ctx.stroke();
+    
+    // 4. Lowlight (Edge Darkening) for cylindrical 3D look
+    ctx.strokeStyle = `rgba(0,0,0,${shim*0.3})`;
+    ctx.lineWidth = thickness * 0.8;
+    ctx.beginPath(); 
+    ctx.moveTo(x1, y1+0.5); 
+    ctx.lineTo(x2, y2+0.5); 
+    ctx.stroke();
   }
+  
+  ctx.restore();
 }
 
 export function generateDSTPoints(src, stitch, fab) {

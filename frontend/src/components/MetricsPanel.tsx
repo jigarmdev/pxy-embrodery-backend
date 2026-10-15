@@ -4,14 +4,14 @@ import { StitchMetrics } from '../lib/api';
 export default function MetricsPanel({ metrics }: { metrics: StitchMetrics | null }) {
   if (!metrics) {
     return (
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex items-center justify-center min-h-[300px]">
+      <div className="bg-surface p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 flex items-center justify-center min-h-[300px]">
         <p className="text-gray-400">Run digitization to view metrics</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+    <div className="bg-surface p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
       <h2 className="text-xl font-bold text-gray-800 mb-6">Production Metrics Dashboard</h2>
       
       <div className="grid grid-cols-2 gap-4 mb-6">

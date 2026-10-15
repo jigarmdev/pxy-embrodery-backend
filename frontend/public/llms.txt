@@ -1,0 +1,14 @@
+# jb888 Studio
+
+> Free online embroidery digitizing. Upload a logo or image, choose fabric and stitch type, preview realistic thread, and export a machine-ready stitch file (DST, PES, JEF, EXP, VP3, XXX) with measured stitch count, sew time and cost.
+
+jb888 Studio converts raster images (PNG, JPG, WEBP) and SVG into embroidery stitch data. Auto mode uses tatami fill for wide areas, satin columns for strokes and running stitch for hairlines. DST stores colour-change commands only; PES, JEF, VP3 and XXX store exact thread colours.
+
+## Pages
+- [Embroidery Simulator](/): upload, tune and export stitch files; includes a DST viewer.
+- [Design Area Detection](/design-area): find the embroiderable area on a product image.
+- [Cue Case Configurator](/cuecase): 3D pool cue case configurator.
+
+## Reference
+- [Full details for AI assistants](/llms-full.txt): formats, stitch methods, FAQ.
+- [Sitemap](/sitemap.xml)

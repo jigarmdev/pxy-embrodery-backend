@@ -1,0 +1,32 @@
+# jb888 Studio: full reference
+
+## What it does
+Converts a logo or image into an embroidery stitch file. Shows a realistic thread preview before sewing and measures stitch count, thread length, colour count, design size, sew time and complexity from the generated design. Recommends needle, stabilizer and thread by fabric. Estimates material and labour cost against a budget.
+
+## Export formats
+- DST: Tajima and most commercial machines. Colour-change commands only, no thread colours.
+- PES: Brother, Babylock. Stores thread colours.
+- JEF: Janome. Stores thread colours.
+- EXP: Melco, Bernina. Colour-change commands only.
+- VP3: Husqvarna Viking, Pfaff. Stores thread colours.
+- XXX: Singer. Stores thread colours.
+
+## Stitch methods
+More than 25 methods including tatami fill, satin column, running stitch, zigzag and cross-stitch. Underlay (edge, zigzag, grid) and pull compensation are applied automatically and adjustable.
+
+## Input
+PNG, JPG, WEBP or SVG. Images over 1200 px are resized. 1 to 12 colours. Transparent or plain backgrounds work best. Photos and gradients must be reduced to few solid colours.
+
+## Other tools
+- DST viewer: open any .dst file to see thread rendering, rulers, hoop overlay, measure tool, playback and analysis.
+
+## How to convert a logo to an embroidery file
+1. Upload your artwork (drag and drop, paste, or pick a sample).
+2. Choose fabric and stitch method.
+3. Preview the stitched result and check stitch count, sew time and cost.
+4. Export in the format your machine reads.
+
+## FAQ
+Q: Does DST store thread colours? A: No, only colour changes. Use PES, JEF, VP3 or XXX for exact colours.
+Q: What image works best? A: Flat artwork with few solid colours and a transparent or plain background.
+Q: Can I check stitch count before sewing? A: Yes, it is measured from the generated design.
